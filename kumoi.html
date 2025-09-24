@@ -69,15 +69,17 @@
 
     <section class="card result" id="resultCard" style="display:none"></section>
 
-    <div class="footer">
-      <div class="inner">
-        <div class="muted">モード：<span id="modeLabel">20問版</span></div>
-        <div class="row">
-          <button class="btn ghost" id="copyBtn">結果をコピー</button>
-          <button class="btn" id="calcBtn">結果を表示</button>
-        </div>
-      </div>
+<div class="footer">
+  <div class="inner">
+    <div class="muted">モード：<span id="modeLabel">20問版</span></div>
+    <div class="row">
+      <!-- ✅ シンプル表示ボタンも詳細表示ボタンも削除 -->
+      <button class="btn ghost" id="copyBtn">結果をコピー</button>
+      <button class="btn" id="calcBtn">結果を表示</button>
     </div>
+  </div>
+</div>
+
 
     <section class="card pad" style="margin-top:12px">
       <div class="title">ご案内</div>
@@ -371,6 +373,7 @@ function init(){
     if(!txt){ alert('まず結果を表示してください。'); return; }
     copyToClipboard(txt);
   });
+
   setMode('20'); // デフォルトは20問
 }
 document.addEventListener('DOMContentLoaded', init);
