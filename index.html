@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>雲井鳴診断｜20問/60問・日本語ポップ版</title>
+  <style>
+    :root{
+      --bg:linear-gradient(180deg,#f6f9ff, #ffffff);
+      --fg:#0f172a; --muted:#475569;
+      --brand:#8f82bc;   /* 今様色ベースの紫 */
+      --accent:#6ec5ff;  /* 空色ベースの水色 */
+      --card:#ffffff; --border:#e2e8f0;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; color:var(--fg); background:var(--bg)}
+    .wrap{max-width:920px;margin:0 auto;padding:16px 16px 96px}
+    header{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;margin:8px 0 16px}
+    h1{font-size:20px;margin:0}
+    .muted{color:var(--muted);font-size:13px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 4px 14px rgba(15,23,42,0.06)}
+    .card.pad{padding:16px}
+    .title{font-size:16px;font-weight:700;margin:0 0 6px}
+    .progress{height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden}
+    .progress > div{height:100%;background:var(--brand);width:0%}
+    .q{padding:14px 16px;border-top:1px solid var(--border)}
+    .q:first-child{border-top:none}
+    .qtitle{font-size:14px;margin:0 0 10px}
+    .slider{display:flex;align-items:center;gap:8px}
+    input[type=range]{width:100%}
+    .pill{font-size:11px;border:1px solid var(--border);padding:2px 8px;border-radius:999px;color:var(--muted)}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{appearance:none;border:none;background:var(--brand);color:#fff;padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer}
+    .btn.ghost{background:#fff;color:var(--brand);border:1px solid var(--brand)}
+    .btn.muted{background:#f8fafc;color:var(--muted)}
+    .footer{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,0.98);border-top:1px solid var(--border);backdrop-filter:saturate(180%) blur(10px)}
+    .footer .inner{max-width:920px;margin:0 auto;padding:10px 16px;display:flex;gap:8px;align-items:center;justify-content:space-between}
+    .result{padding:16px}
+    .result h2{font-size:22px;margin:0 0 8px}
+    .badge{display:inline-block;background:#eef2ff;color:#3730a3;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700;margin-right:6px}
+    ul{margin:6px 0 10px 20px}
+    .disclaimer{font-size:12px;color:var(--muted)}
+    .warn{color:#dc2626;font-size:13px;margin-top:6px}
+    .highlight{border:2px solid #ef4444;animation:blink 1s infinite alternate}
+    @keyframes blink{from{background:#fff}to{background:#fee2e2}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>雲井鳴診断（20問/60問・日本語ポップ版）</h1>
+        <div class="muted">むずかしい理論は裏側へ。日常の質問に答えるだけで、あなたの立ち位置と相性がわかる。回答はブラウザ内のみで処理されます。</div>
+      </div>
+      <div class="row">
+        <button class="btn ghost" id="mode20">20問版（サクッと）</button>
+        <button class="btn" id="mode60">60問版（じっくり）</button>
+      </div>
+    </header>
+
+    <section class="card pad" id="progressCard">
+      <div class="title">進行状況</div>
+      <div class="progress" aria-label="progress"><div id="bar"></div></div>
+      <div class="muted" id="count">0/0 回答（0%）</div>
+      <div id="warnMsg" class="warn"></div>
+    </section>
+
+    <section class="card" id="questionCard"></section>
+
+    <section class="card result" id="resultCard" style="display:none"></section>
+
+    <div class="footer">
+      <div class="inner">
+        <div class="muted">モード：<span id="modeLabel">20問版</span></div>
+        <div class="row">
+          <button class="btn muted" id="showSimple">シンプル表示</button>
+          <button class="btn ghost" id="showDetail">詳細表示</button>
+          <button class="btn ghost" id="copyBtn">結果をコピー</button>
+          <button class="btn" id="calcBtn">結果を表示</button>
+        </div>
+      </div>
+    </div>
+
+    <section class="card pad" style="margin-top:12px">
+      <div class="title">ご案内</div>
+      <div class="disclaimer">
+        本診断はユング心理学系タイプ論およびソシオニクス原典の視点に「着想を得て」雲井鳴が再設計した、日本語特化・VTuber/配信向けのオリジナル診断です。<br>
+        公式のソシオニクス/MBTI/16Personalities 等とは関係がありません。医療的・臨床的評価を行うものではありません。回答はブラウザ内で処理され、サーバ送信はしません。
+      </div>
+    </section>
+  </div>
+
+<script>
+/* ===================== 質問リスト ===================== */
+/* 20問版（カジュアル） */
+const Q20 = [
+  // E/I
+  {id:'q1', text:'予定のない休日、人と会う約束が入るとむしろ元気が出る。', axis:'EI', polarity:+1},
+  {id:'q2', text:'初対面の場でも、自分から話題を切り出すことが多い。', axis:'EI', polarity:+1},
+  {id:'q3', text:'長時間の社交の後は、一人の時間で充電しないとしんどい。', axis:'EI', polarity:-1},
+  {id:'q4', text:'沈黙が続くと自分から話題を投入したくなる。', axis:'EI', polarity:+1},
+  // N/S
+  {id:'q5', text:'会話の中で「この先こういう展開もあるかも」と想像することが多い。', axis:'NS', polarity:+1},
+  {id:'q6', text:'新しいアイデアや未来の可能性を考えるのが好きだ。', axis:'NS', polarity:+1},
+  {id:'q7', text:'道具やUIの触り心地やデザインの良し悪しに敏感だ。', axis:'NS', polarity:-1},
+  {id:'q8', text:'環境の音や匂い、明るさの快・不快で気分や集中力が変わる。', axis:'NS', polarity:-1},
+  // T/F
+  {id:'q9', text:'意見の対立では、まず根拠やルールの整合性を確認したい。', axis:'TF', polarity:+1},
+  {id:'q10', text:'誰かの失敗に直面すると、原因分析を優先しがちだ。', axis:'TF', polarity:+1},
+  {id:'q11', text:'会議では結論の妥当性よりも、当事者の気持ちの納得を重視する。', axis:'TF', polarity:-1},
+  {id:'q12', text:'チームの空気や雰囲気の変化に敏感だ。', axis:'TF', polarity:-1},
+  // J/P
+  {id:'q13', text:'週の初めに、ざっくりでも予定が埋まっていると安心できる。', axis:'JP', polarity:+1},
+  {id:'q14', text:'締切があるときは前倒しで進めて“余白”を作りたい。', axis:'JP', polarity:+1},
+  {id:'q15', text:'旅先では行き当たりばったりで気分次第に動くのが好きだ。', axis:'JP', polarity:-1},
+  {id:'q16', text:'新しい情報が入れば、直前でも計画を変えるのに抵抗がない。', axis:'JP', polarity:-1},
+  // Elements
+  {id:'q17', text:'出来事を「始まりから今、そしてこれから」に結びつけて考えることがある。', axis:'Ni', polarity:+1},
+  {id:'q18', text:'誰かの隠れた才能や可能性を発見するのが得意だ。', axis:'Ne', polarity:+1},
+  {id:'q19', text:'数字や実績など「結果ベースの話」があると安心できる。', axis:'Te', polarity:+1},
+  {id:'q20', text:'空気が沈むと「なんとか盛り上げたい」と感じる。', axis:'Fe', polarity:+1},
+];
+
+/* 60問版（詳細・改良済み） */
+const Q60 = [
+  // EI
+  {id:'q1', text:'予定のない休日、人と会う約束が入るとむしろ元気が出る。', axis:'EI', polarity:+1},
+  {id:'q2', text:'会議後は大人数と雑談するとエネルギーが回復することがある。', axis:'EI', polarity:+1},
+  {id:'q3', text:'初対面の場でも、自分から話題を切り出すことが多い。', axis:'EI', polarity:+1},
+  {id:'q4', text:'重要な決断は、まず頭の中で整理してから口に出す方だ。', axis:'EI', polarity:-1},
+  {id:'q5', text:'長時間の社交の後は、一人の時間で充電しないとしんどい。', axis:'EI', polarity:-1},
+  {id:'q6', text:'沈黙が続くと自分から話題を投入したくなる。', axis:'EI', polarity:+1},
+  // NS
+  {id:'q7', text:'会話の中で「この先こういう展開もあるかも」と想像することが多い。', axis:'NS', polarity:+1},
+  {id:'q8', text:'旅行計画は持ち物や手順より“体験のテーマ”から考える。', axis:'NS', polarity:+1},
+  {id:'q9', text:'新製品を見ると今後の応用や未来像を想像するのが好きだ。', axis:'NS', polarity:+1},
+  {id:'q10', text:'作業では手触り・匂い・音など五感の心地よさを重視する。', axis:'NS', polarity:-1},
+  {id:'q11', text:'抽象的なたとえ話よりも具体例や数値の方が腹落ちする。', axis:'NS', polarity:-1},
+  {id:'q12', text:'一見バラバラな出来事の中に「共通点やつながり」を見つけるのが好きだ。', axis:'NS', polarity:+1},
+  {id:'q13', text:'道具やUIの触り心地に敏感で良し悪しが気になる。', axis:'NS', polarity:-1},
+  {id:'q14', text:'環境の音や匂い、明るさの快・不快で気分や集中力が変わる。', axis:'NS', polarity:-1},
+  // TF
+  {id:'q15', text:'意見の対立では、まず根拠やルールの整合性を確認したい。', axis:'TF', polarity:+1},
+  {id:'q16', text:'誰かの失敗に直面すると、感情より原因分析が先になりがちだ。', axis:'TF', polarity:+1},
+  {id:'q17', text:'フィードバックは正確さが最優先で多少きつくても構わない。', axis:'TF', polarity:+1},
+  {id:'q18', text:'物事の判断で、その場の人間関係の雰囲気を強く考慮する。', axis:'TF', polarity:-1},
+  {id:'q19', text:'会議では結論の妥当性より当事者の気持ちの納得を重視する。', axis:'TF', polarity:-1},
+  {id:'q20', text:'論拠が弱い合意は長続きしないと感じる。', axis:'TF', polarity:+1},
+  {id:'q21', text:'人を傷つけそうな正論は言い回しを工夫する。', axis:'TF', polarity:-1},
+  {id:'q22', text:'チームの空気や温度感の変化に敏感だ。', axis:'TF', polarity:-1},
+  // JP
+  {id:'q23', text:'週の初めに、ざっくりでも予定が埋まっていると安心できる。', axis:'JP', polarity:+1},
+  {id:'q24', text:'締切があるときは前倒しで進めて“余白”を作りたい。', axis:'JP', polarity:+1},
+  {id:'q25', text:'旅先では行き当たりばったりで気分次第に動くのが好きだ。', axis:'JP', polarity:-1},
+  {id:'q26', text:'直前により良い案が出たら計画を大きく変えることに抵抗がない。', axis:'JP', polarity:-1},
+  {id:'q27', text:'机やフォルダは用途ごとに体系的に整理しておきたい。', axis:'JP', polarity:+1},
+  {id:'q28', text:'ToDoは期限と優先度で整理しておきたい。', axis:'JP', polarity:+1},
+  {id:'q29', text:'新情報が入れば方針変更もスピーディに行う。', axis:'JP', polarity:-1},
+  {id:'q30', text:'予定は空白を残して自由度を確保したい。', axis:'JP', polarity:-1},
+  // Elements Ni/Ne/Si/Se/Ti/Te/Fi/Fe
+  {id:'q31', text:'目の前の出来事から「未来の展開」を予測してしまうことが多い。', axis:'Ni', polarity:+1},
+  {id:'q32', text:'出来事を「始まりから今、そしてこれから」に結びつけて考える。', axis:'Ni', polarity:+1},
+  {id:'q33', text:'物事を見たとき「こんな展開もあるかも」と次々に思いつく。', axis:'Ne', polarity:+1},
+  {id:'q34', text:'誰かの隠れた才能や可能性を発見するのが得意だ。', axis:'Ne', polarity:+1},
+  {id:'q35', text:'部屋の明るさや温度が少し違うだけで集中力が変わる。', axis:'Si', polarity:+1},
+  {id:'q36', text:'美味しい食事や心地よい環境に強く幸せを感じる。', axis:'Si', polarity:+1},
+  {id:'q37', text:'場の主導権を握らないと落ち着かないことがある。', axis:'Se', polarity:+1},
+  {id:'q38', text:'相手が押しに弱いと感じたら、自然とこちらがリードしてしまう。', axis:'Se', polarity:+1},
+  {id:'q39', text:'言葉やルールの定義が曖昧だとモヤモヤする。', axis:'Ti', polarity:+1},
+  {id:'q40', text:'複雑な仕組みを整理して理解するのが好きだ。', axis:'Ti', polarity:+1},
+  {id:'q41', text:'数字や実績など「結果ベースの話」があると安心できる。', axis:'Te', polarity:+1},
+  {id:'q42', text:'効率的に動ける仕組みを考えるのが得意だ。', axis:'Te', polarity:+1},
+  {id:'q43', text:'誰かとの関係の「近さや距離感」を敏感に意識している。', axis:'Fi', polarity:+1},
+  {id:'q44', text:'相手の価値観や信念を尊重することを大切にしている。', axis:'Fi', polarity:+1},
+  {id:'q45', text:'集まりで場が盛り上がると、自分も自然とテンションが上がる。', axis:'Fe', polarity:+1},
+  {id:'q46', text:'空気が沈むと「なんとか盛り上げたい」と感じる。', axis:'Fe', polarity:+1},
+  // 補助12
+  {id:'q47', text:'企画では“コンセプト”を最初に固めたい。', axis:'NS', polarity:+1},
+  {id:'q48', text:'厳しめのフィードバックでも役立つなら歓迎される。', axis:'TF', polarity:+1},
+  {id:'q49', text:'旅先では現地の気分や天気で予定を決めることが多い。', axis:'JP', polarity:-1},
+  {id:'q50', text:'朝のルーティンが整っていると安心できる。', axis:'JP', polarity:+1},
+  {id:'q51', text:'複数案件を同時に回すための仕組み化が好きだ。', axis:'JP', polarity:+1},
+  {id:'q52', text:'新しい体験をするとき、まず「雰囲気」を大事にする。', axis:'Fi', polarity:+1},
+  {id:'q53', text:'相手の価値観や背景を理解してから結論を出したい。', axis:'Fi', polarity:+1},
+  {id:'q54', text:'熱意やモチベーションはパフォーマンスに直結すると考える。', axis:'Fe', polarity:+1},
+  {id:'q55', text:'想像の中で「まだ起きていない場面」を鮮明に描くことがある。', axis:'Ni', polarity:+1},
+  {id:'q56', text:'成果が数字で見えるとやる気が出る。', axis:'Te', polarity:+1},
+  {id:'q57', text:'仲間が楽しそうにしていると、自分も自然と楽しくなる。', axis:'Fe', polarity:+1},
+  {id:'q58', text:'「ルールが守られているか」が気になる。', axis:'Ti', polarity:+1},
+  {id:'q59', text:'人と話すより、一人で考える時間の方がアイデアが出ることがある。', axis:'EI', polarity:-1},
+  {id:'q60', text:'自由度よりも秩序や安定を優先したい。', axis:'JP', polarity:+1},
+];
+
+/* ===================== タイプ定義 ===================== */
+const TYPES = {
+  IEE:{name:'アイデア冒険家', cluster:'アイデアマン型', perspective:'アイデア視点', quadra:'Delta'},
+  IEI:{name:'夢見る共感者', cluster:'夢語り型', perspective:'ドラマティック視点', quadra:'Beta'},
+  EIE:{name:'ドラマティック演出家', cluster:'盛り上げ役型', perspective:'ドラマティック視点', quadra:'Beta'},
+  EII:{name:'お人好し仲裁役', cluster:'癒し型', perspective:'調和視点', quadra:'Delta'},
+  ILE:{name:'ひらめき発明家', cluster:'アイデアマン型', perspective:'アイデア視点', quadra:'Alpha'},
+  LII:{name:'理屈マスター', cluster:'参謀型', perspective:'ルール視点', quadra:'Alpha'},
+  LIE:{name:'戦略プランナー', cluster:'参謀型', perspective:'アイデア視点', quadra:'Gamma'},
+  ILI:{name:'未来予報士', cluster:'夢語り型', perspective:'ルール視点', quadra:'Gamma'},
+  ESE:{name:'場を盛り上げ隊長', cluster:'ムードメーカー型', perspective:'主役視点', quadra:'Alpha'},
+  ESI:{name:'正義の番人', cluster:'守り役型', perspective:'ルール視点', quadra:'Gamma'},
+  SEE:{name:'カリスマ配信者', cluster:'ムードメーカー型', perspective:'主役視点', quadra:'Gamma'},
+  SLE:{name:'ゴーゴー行動派', cluster:'盛り上げ役型', perspective:'主役視点', quadra:'Beta'},
+  SEI:{name:'ゆるふわ癒し役', cluster:'癒し型', perspective:'調和視点', quadra:'Alpha'},
+  LSE:{name:'段取りマネージャー', cluster:'段取り型', perspective:'ルール視点', quadra:'Delta'},
+  LSI:{name:'ルール番長', cluster:'段取り型', perspective:'ルール視点', quadra:'Beta'},
+  SLI:{name:'マイペース職人', cluster:'守り役型', perspective:'調和視点', quadra:'Delta'},
+};
+
+/* ===================== 相性（デュアル/同クアドラ/コンフリクト） ===================== */
+const REL = {
+  IEE:{dual:'マイペース職人', same:['段取りマネージャー','お人好し仲裁役'], conflict:'ルール番長'},
+  IEI:{dual:'ゴーゴー行動派', same:['ドラマティック演出家','ルール番長'], conflict:'段取りマネージャー'},
+  EIE:{dual:'ルール番長', same:['夢見る共感者','ゴーゴー行動派'], conflict:'マイペース職人'},
+  EII:{dual:'カリスマ配信者', same:['段取りマネージャー','マイペース職人'], conflict:'ゴーゴー行動派'},
+  ILE:{dual:'ゆるふわ癒し役', same:['理屈マスター','場を盛り上げ隊長'], conflict:'正義の番人'},
+  LII:{dual:'場を盛り上げ隊長', same:['ひらめき発明家','ゆるふわ癒し役'], conflict:'カリスマ配信者'},
+  LIE:{dual:'正義の番人', same:['未来予報士','理屈マスター'], conflict:'ゆるふわ癒し役'},
+  ILI:{dual:'カリスマ配信者', same:['正義の番人','戦略プランナー'], conflict:'場を盛り上げ隊長'},
+  ESE:{dual:'理屈マスター', same:['ひらめき発明家','ゆるふわ癒し役'], conflict:'未来予報士'},
+  ESI:{dual:'戦略プランナー', same:['未来予報士','理屈マスター'], conflict:'ひらめき発明家'},
+  SEE:{dual:'未来予報士', same:['正義の番人','戦略プランナー'], conflict:'理屈マスター'},
+  SLE:{dual:'夢見る共感者', same:['ドラマティック演出家','ルール番長'], conflict:'お人好し仲裁役'},
+  SEI:{dual:'ひらめき発明家', same:['場を盛り上げ隊長','理屈マスター'], conflict:'戦略プランナー'},
+  LSE:{dual:'夢見る共感者', same:['お人好し仲裁役','マイペース職人'], conflict:'ドラマティック演出家'},
+  LSI:{dual:'ドラマティック演出家', same:['夢見る共感者','ゴーゴー行動派'], conflict:'アイデア冒険家'},
+  SLI:{dual:'アイデア冒険家', same:['段取りマネージャー','お人好し仲裁役'], conflict:'ドラマティック演出家'},
+};
+
+/* ===================== 詳細（強み・弱み・VTuber適性・立ち位置） ===================== */
+const DETAIL = {
+  IEI:{strength:['感情に敏感で共感力が高い','芸術的・表現的な活動に強い','未来像を語れる','雰囲気を和ませる','安心感を与える'],
+       weak:['現実タスクが苦手','優柔不断','プレッシャーに弱い','対立回避で先送り','強い主導に萎縮'],
+       vtuber:['ASMR・朗読・歌枠','世界観重視の雑談'], role:'雰囲気担当／ストーリーテラー'},
+  IEE:{strength:['人との出会いから企画を広げる','流行に敏感','社交的で柔軟','巻き込み力が高い','ネットワーク作りが得意'],
+       weak:['管理が苦手','集中が続かない','実行力不足','興味が移りやすい','情熱が拡散しやすい'],
+       vtuber:['参加型配信','企画コラボ','ゲストトーク'], role:'アイデアマン／種まき役'},
+  ILE:{strength:['発想力豊か','柔軟で切替が早い','論理と直感の両立','興味が広い','驚きを生む案'],
+       weak:['飽きやすい','実行面が弱い','掘る前に次へ','リスク管理が甘い','収拾不能になりがち'],
+       vtuber:['新作実況','実験企画'], role:'ネタ出し／発明家'},
+  LSE:{strength:['計画遂行力','リソース管理','責任感','安定進行','信頼感'],
+       weak:['柔軟性不足','理想に弱い','型にはまりやすい','融通が利かない','遊び心不足'],
+       vtuber:['定期企画','運営・進行','整理系配信'], role:'進行管理／裏方リーダー'},
+  LSI:{strength:['正確・几帳面','秩序維持','統率','責任感','安定感'],
+       weak:['柔軟性不足','新奇性に弱い','厳格','人に厳しい','感情に疎い'],
+       vtuber:['大会運営','検証・ルール解説'], role:'審判役／秩序の要'},
+  EIE:{strength:['ストーリーテリング','感情表現で動かす','発信力','共感を引き出す','鼓舞力'],
+       weak:['冷静さ不足','ドラマを盛りすぎ','感情的で疲れやすい','論理批判に弱い','管理が苦手'],
+       vtuber:['物語系実況','演出企画','歌枠'], role:'演出担当／ムードシェイパー'},
+  SLE:{strength:['即断即決','勇敢・突破力','挑戦的','勢いで流れを作る','リーダーシップ'],
+       weak:['計画不足','衝突を招きやすい','協調性低め','リスク管理甘い','感情配慮薄い'],
+       vtuber:['挑戦配信','対戦ゲーム','体当たり企画'], role:'切り込み隊長／アクション担当'},
+  ESE:{strength:['明るさで和ませる','反応を拾って盛り上げる','初対面に強い','雰囲気活性化','サービス精神'],
+       weak:['論理が苦手','感情に振り回される','瞬間重視','疲れやすい','主導しすぎて委縮を招く'],
+       vtuber:['雑談','歌枠','イベントMC'], role:'司会進行／場の中心'},
+  SEE:{strength:['瞬発力','カリスマ','巻き込み','自信あるパフォーマンス','豪快さ'],
+       weak:['持続力低い','ルール嫌い','調整が苦手','衝突を恐れない','反発しやすい'],
+       vtuber:['アイドル活動','歌ってみた','ファンイベント'], role:'メインスター／ムード支配者'},
+  LII:{strength:['分析力','理論体系化','複雑整理','客観性','批判的思考'],
+       weak:['感情に鈍感','頑固','人間関係軽視','細部に固執','空気を読みにくい'],
+       vtuber:['解説配信','考察動画','分析枠'], role:'冷静参謀／まとめ役'},
+  LIE:{strength:['戦略性','大局観','実行力','成果志向','ビジネス感覚'],
+       weak:['冷徹に見られる','柔軟性不足','感情配慮弱い','短期関係軽視','速度ズレ'],
+       vtuber:['企画プロデュース','長期企画配信'], role:'戦略参謀／プロデューサー'},
+  ILI:{strength:['未来予測','リスク管理','冷静・論理','観察眼','長期視点'],
+       weak:['行動が遅い','悲観的','柔軟性不足','即応性低い','流れに乗れない'],
+       vtuber:['考察配信','解説動画','シナリオ分析'], role:'冷静参謀／未来予報'},
+  SEI:{strength:['雰囲気を和ませる','聞き上手','安心感','快適さ重視','柔らかい接し方'],
+       weak:['受け身','決断力不足','主導性弱い','長期ビジョン弱い','流されやすい'],
+       vtuber:['ASMR','癒し配信','雑談'], role:'雰囲気担当／聞き役'},
+  EII:{strength:['誠実・信頼','仲裁','共感的','長期関係重視','道徳心'],
+       weak:['意思表示弱い','主導できない','遠慮がち','感情に揺れやすい','融通が利かない'],
+       vtuber:['お悩み相談','共感雑談','仲裁コラボ'], role:'仲裁役／裏方サポート'},
+  ESI:{strength:['誠実','倫理観','守護意識','忠誠心','関係管理'],
+       weak:['批判的','柔軟性不足','保守的','主観的判断','挑戦に消極的'],
+       vtuber:['ルール系配信','真面目対談','監督役'], role:'守護者／秩序の番人'},
+  SLI:{strength:['継続力','職人気質','落ち着き','安定','コツコツ作業'],
+       weak:['消極的','社交性低い','頑固','新しい挑戦に消極的','人間関係に疎い'],
+       vtuber:['ものづくり配信','作業ASMR','検証レビュー'], role:'職人枠／安定要員'},
+};
+
+/* ===================== 診断ロジック ===================== */
+// 4軸スコア算出
+function sumAxis(axis){ return current.filter(q=>q.axis===axis).reduce((a,q)=>a+(answers[q.id]??0)*q.polarity,0); }
+function computeAxes(){
+  return {
+    EI: sumAxis('EI'), NS: sumAxis('NS'), TF: sumAxis('TF'), JP: sumAxis('JP'),
+    Ni: sumAxis('Ni'), Ne: sumAxis('Ne'), Si: sumAxis('Si'), Se: sumAxis('Se'),
+    Ti: sumAxis('Ti'), Te: sumAxis('Te'), Fi: sumAxis('Fi'), Fe: sumAxis('Fe')
+  };
+}
+function axesToMBTI(ax){
+  const E = ax.EI>=0?'E':'I';
+  const N = ax.NS>=0?'N':'S';
+  const T = ax.TF>=0?'T':'F';
+  const J = ax.JP>=0?'J':'P';
+  return E+N+T+J;
+}
+const MBTI2SOC = { ENFJ:'EIE', ENFP:'IEE', ENTJ:'LIE', ENTP:'ILE', ESFJ:'ESE', ESFP:'SEE', ESTJ:'LSE', ESTP:'SLE',
+                    INFJ:'EII', INFP:'IEI', INTJ:'LII', INTP:'ILI', ISFJ:'ESI', ISFP:'SEI', ISTJ:'LSI', ISTP:'SLI' };
+
+// タイプ推定（4軸→近似→要素で微調整）
+function pickType(ax){
+  const mb = axesToMBTI(ax);
+  let key = MBTI2SOC[mb] || 'IEE';
+  // 情報要素の優勢で微調整（簡易ルール）
+  if(key==='IEI' && ax.Fe > ax.Ni+3) key='EIE';
+  if(key==='IEE' && ax.Ti > ax.Fe+3) key='ILE';
+  if(key==='LSE' && ax.Fi > ax.Te+2) key='EII';
+  if(key==='LIE' && ax.Fi > ax.Te+4) key='ESI';
+  if(key==='ILI' && ax.Se > ax.Ni+3) key='SEE';
+  if(key==='LII' && ax.Fe > ax.Ti+3) key='ESE';
+  return key;
+}
+
+/* ===================== UI制御 ===================== */
+let mode='20', answers={}, current=[];
+function setMode(m){
+  mode = m; current = (m==='20')? Q20 : Q60; answers={};
+  document.getElementById('modeLabel').textContent = (m==='20')? '20問版':'60問版';
+  renderQuestions(); updateProgress();
+  const rc = document.getElementById('resultCard'); rc.style.display='none'; rc.innerHTML='';
+  document.getElementById('warnMsg').textContent='';
+}
+
+function renderQuestions(){
+  const wrap = document.getElementById('questionCard'); wrap.innerHTML='';
+  current.forEach(q=>{
+    const sec = document.createElement('div'); sec.className='q';
+    sec.innerHTML = `
+      <div class="qtitle" id="t_${q.id}">${q.text}</div>
+      <div class="slider">
+        <span class="pill">-5</span>
+        <input type="range" min="-5" max="5" step="1" value="0" id="${q.id}" aria-labelledby="t_${q.id}">
+        <span class="pill">+5</span>
+        <span class="pill" id="v_${q.id}">0</span>
+      </div>`;
+    wrap.appendChild(sec);
+    const input = sec.querySelector('input');
+    input.addEventListener('input', e=>{
+      answers[q.id]=Number(e.target.value);
+      sec.querySelector(`#v_${q.id}`).textContent=String(answers[q.id]||0);
+      updateProgress();
+    });
+  });
+}
+
+function updateProgress(){
+  const total = current.length;
+  const done = Object.keys(answers).filter(k=>answers[k]!==undefined && answers[k]!==null).length;
+  const pct = Math.round((done/total)*100);
+  document.getElementById('bar').style.width = pct+'%';
+  document.getElementById('count').textContent = `${done}/${total} 回答（${pct}%）`;
+}
+
+function tryShowResult(){
+  const unanswered = current.filter(q => answers[q.id]===undefined || answers[q.id]===null);
+  if(unanswered.length>0){
+    const first = unanswered[0];
+    const inputEl = document.getElementById(first.id);
+    if(inputEl){
+      const card = inputEl.closest('.q');
+      if(card){ card.scrollIntoView({behavior:'smooth', block:'center'}); card.classList.add('highlight'); setTimeout(()=>card.classList.remove('highlight'),4000); }
+    }
+    document.getElementById('warnMsg').textContent = `⚠ 未回答があります（残り ${unanswered.length} 問）`;
+    return;
+  }
+  buildResult();
+}
+
+function buildResult(){
+  const ax = computeAxes();
+  const key = pickType(ax);
+  const t = TYPES[key]; const rel = REL[key]; const d = DETAIL[key]||{strength:[],weak:[],vtuber:[],role:''};
+
+  const simple = document.getElementById('showSimple').dataset.on==='1';
+
+  const html = [];
+  html.push(`<div class="badge">${t.cluster}</div> <div class="badge">${t.perspective}</div> <div class="badge">クアドラ：${t.quadra}</div>`);
+  html.push(`<h2>あなたは「${t.name}」</h2>`);
+  if(simple){
+    html.push(`<p class="muted">強み：${d.strength[0]||'—'} ／ 弱み：${d.weak[0]||'—'}</p>`);
+  }else{
+    html.push(`<h3>強み</h3><ul>${d.strength.map(x=>`<li>${x}</li>`).join('')}</ul>`);
+    html.push(`<h3>弱み</h3><ul>${d.weak.map(x=>`<li>${x}</li>`).join('')}</ul>`);
+    html.push(`<h3>相性</h3><ul>
+      <li><b>合う（デュアル）：</b>${rel?.dual||'—'}</li>
+      <li><b>良い（同クアドラ）：</b>${(rel?.same||[]).join('・')||'—'}</li>
+      <li><b>注意（コンフリクト）：</b>${rel?.conflict||'—'}</li>
+    </ul>`);
+    html.push(`<h3>VTuber適性</h3><ul>${d.vtuber.map(x=>`<li>${x}</li>`).join('')}</ul>`);
+    html.push(`<h3>コラボの立ち位置</h3><p>${d.role||'—'}</p>`);
+    html.push(`<h3>軸スコア</h3><p>E/I=${ax.EI.toFixed(1)}　N/S=${ax.NS.toFixed(1)}　T/F=${ax.TF.toFixed(1)}　J/P=${ax.JP.toFixed(1)}</p>`);
+  }
+
+  const shareText = [
+    '【雲井鳴診断 結果】',
+    `タイプ：${t.name}（${t.cluster}／${t.perspective}／クアドラ=${t.quadra}）`,
+    `軸スコア：E/I=${ax.EI.toFixed(1)} N/S=${ax.NS.toFixed(1)} T/F=${ax.TF.toFixed(1)} J/P=${ax.JP.toFixed(1)}`
+  ].join('\n');
+
+  const card = document.getElementById('resultCard');
+  card.innerHTML = html.join('');
+  card.style.display='block';
+  card.dataset.share = shareText;
+  document.getElementById('warnMsg').textContent='';
+}
+
+/* コピー機能（iOS互換フォールバック） */
+function copyToClipboard(txt){
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(txt).then(()=>alert('結果をコピーしました。')).catch(()=>fallbackCopy(txt));
+  }else fallbackCopy(txt);
+}
+function fallbackCopy(txt){
+  const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta);
+  ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+  alert('結果をコピーしました。（互換モード）');
+}
+
+/* 初期化 */
+function init(){
+  document.getElementById('mode20').addEventListener('click',()=>setMode('20'));
+  document.getElementById('mode60').addEventListener('click',()=>setMode('60'));
+  document.getElementById('calcBtn').addEventListener('click', tryShowResult);
+  document.getElementById('copyBtn').addEventListener('click', ()=>{
+    const txt = document.getElementById('resultCard').dataset.share || '';
+    if(!txt){ alert('まず結果を表示してください。'); return; }
+    copyToClipboard(txt);
+  });
+
+  // シンプル/詳細切替（初期はシンプル）
+  const simpleBtn = document.getElementById('showSimple');
+  const detailBtn = document.getElementById('showDetail');
+  simpleBtn.dataset.on='1'; detailBtn.dataset.on='0';
+  simpleBtn.classList.remove('muted'); detailBtn.classList.add('muted');
+  simpleBtn.addEventListener('click', ()=>{ simpleBtn.dataset.on='1'; detailBtn.dataset.on='0'; simpleBtn.classList.remove('muted'); detailBtn.classList.add('muted'); });
+  detailBtn.addEventListener('click', ()=>{ simpleBtn.dataset.on='0'; detailBtn.dataset.on='1'; simpleBtn.classList.add('muted'); detailBtn.classList.remove('muted'); });
+
+  setMode('20'); // デフォルトは20問
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
