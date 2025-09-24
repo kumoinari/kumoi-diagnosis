@@ -324,10 +324,20 @@ function buildResult(){
   const rel = REL[key]; 
   const d = DETAIL[key];
   lastResult = {t, rel, d, ax};
-  
+
   // 結果は常に詳細表示で出す
-  renderResultView('detail'); 
+  renderResultView('detail');
+
+  // 警告を消す
+  document.getElementById('warnMsg').textContent = '';
+
+  // ボタン状態を詳細側に揃える
+  const simpleBtn = document.getElementById('showSimple');
+  const detailBtn = document.getElementById('showDetail');
+  simpleBtn.classList.add('muted');
+  detailBtn.classList.remove('muted');
 }
+
 
 function renderResultView(mode){
   if(!lastResult) return;
