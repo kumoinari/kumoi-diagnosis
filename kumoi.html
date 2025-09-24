@@ -331,11 +331,12 @@ function buildResult(){
   // 警告を消す
   document.getElementById('warnMsg').textContent = '';
 
-  // ボタン状態を詳細側に揃える
-  const simpleBtn = document.getElementById('showSimple');
-  const detailBtn = document.getElementById('showDetail');
-  simpleBtn.classList.add('muted');
-  detailBtn.classList.remove('muted');
+// ボタン状態を詳細側に揃える
+const simpleBtn = document.getElementById('showSimple');
+const detailBtn = document.getElementById('showDetail');
+simpleBtn.classList.add('muted');
+detailBtn.classList.remove('muted');
+
 }
 
 
@@ -393,8 +394,16 @@ function init(){
 
   const simpleBtn = document.getElementById('showSimple');
   const detailBtn = document.getElementById('showDetail');
-  simpleBtn.addEventListener('click', ()=>renderResultView('simple'));
-  detailBtn.addEventListener('click', ()=>renderResultView('detail'));
+
+  // ここに追加してください 👇
+  simpleBtn.addEventListener('click', ()=>{
+    if(!lastResult) return;  // 結果が出る前は何もしない
+    renderResultView('simple');
+  });
+  detailBtn.addEventListener('click', ()=>{
+    if(!lastResult) return;
+    renderResultView('detail');
+  });
 
   setMode('20'); // デフォルトは20問
 
@@ -403,6 +412,7 @@ function init(){
   detailBtn.classList.remove('muted');
 }
 document.addEventListener('DOMContentLoaded', init);
+
 
 
 </script>
