@@ -73,8 +73,8 @@
       <div class="inner">
         <div class="muted">モード：<span id="modeLabel">20問版</span></div>
         <div class="row">
-          <button class="btn muted" id="showSimple">シンプル表示</button>
-          <button class="btn ghost" id="showDetail">詳細表示</button>
+          <button class="btn ghost" id="showSimple">シンプル表示</button>
+          <button class="btn" id="showDetail">詳細表示</button>
           <button class="btn ghost" id="copyBtn">結果をコピー</button>
           <button class="btn" id="calcBtn">結果を表示</button>
         </div>
@@ -397,8 +397,13 @@ function init(){
   detailBtn.addEventListener('click', ()=>renderResultView('detail'));
 
   setMode('20'); // デフォルトは20問
+
+  // 🔹 初期状態を「詳細表示」に固定
+  simpleBtn.classList.add('muted');
+  detailBtn.classList.remove('muted');
 }
 document.addEventListener('DOMContentLoaded', init);
+
 
 </script>
 </body>
