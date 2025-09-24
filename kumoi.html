@@ -320,9 +320,13 @@ let lastResult = null;
 function buildResult(){
   const ax = computeAxes();
   const key = pickType(ax);
-  const t = TYPES[key]; const rel = REL[key]; const d = DETAIL[key];
+  const t = TYPES[key]; 
+  const rel = REL[key]; 
+  const d = DETAIL[key];
   lastResult = {t, rel, d, ax};
-  renderResultView('detail'); // 初期は詳細表示
+  
+  // 結果は常に詳細表示で出す
+  renderResultView('detail'); 
 }
 
 function renderResultView(mode){
