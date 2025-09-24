@@ -4,12 +4,18 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>雲井鳴診断｜20問/60問・日本語ポップ版</title>
+
+  <!-- ✅ キャッシュ無効化 -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
   <style>
     :root{
       --bg:linear-gradient(180deg,#f6f9ff, #ffffff);
       --fg:#0f172a; --muted:#475569;
-      --brand:#8f82bc;   /* 今様色ベースの紫 */
-      --accent:#6ec5ff;  /* 空色ベースの水色 */
+      --brand:#8f82bc;
+      --accent:#6ec5ff;
       --card:#ffffff; --border:#e2e8f0;
     }
     *{box-sizing:border-box}
@@ -318,7 +324,6 @@ function buildResult(){
   const t = TYPES[key]; const rel = REL[key]; const d = DETAIL[key];
   lastResult = {t, rel, d, ax};
 
-  // 常に詳細表示
   renderResultView();
   document.getElementById('warnMsg').textContent = '';
 }
@@ -370,7 +375,7 @@ function init(){
     if(!txt){ alert('まず結果を表示してください。'); return; }
     copyToClipboard(txt);
   });
-  setMode('20'); // デフォルトは20問
+  setMode('20');
 }
 document.addEventListener('DOMContentLoaded', init);
 </script>
