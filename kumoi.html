@@ -284,7 +284,6 @@ const DETAIL = {
 };
 
 /* ===================== 診断ロジック ===================== */
-// 4軸スコア算出
 function sumAxis(axis){ return current.filter(q=>q.axis===axis).reduce((a,q)=>a+(answers[q.id]??0)*q.polarity,0); }
 function computeAxes(){
   return {
@@ -303,11 +302,9 @@ function axesToMBTI(ax){
 const MBTI2SOC = { ENFJ:'EIE', ENFP:'IEE', ENTJ:'LIE', ENTP:'ILE', ESFJ:'ESE', ESFP:'SEE', ESTJ:'LSE', ESTP:'SLE',
                     INFJ:'EII', INFP:'IEI', INTJ:'LII', INTP:'ILI', ISFJ:'ESI', ISFP:'SEI', ISTJ:'LSI', ISTP:'SLI' };
 
-// タイプ推定（4軸→近似→要素で微調整）
 function pickType(ax){
   const mb = axesToMBTI(ax);
   let key = MBTI2SOC[mb] || 'IEE';
-  // 情報要素の優勢で微調整（簡易ルール）
   if(key==='IEI' && ax.Fe > ax.Ni+3) key='EIE';
   if(key==='IEE' && ax.Ti > ax.Fe+3) key='ILE';
   if(key==='LSE' && ax.Fi > ax.Te+2) key='EII';
@@ -317,46 +314,44 @@ function pickType(ax){
   return key;
 }
 
+/* ===================== 結果描画（キャッシュ方式） ===================== */
+let lastResult = null;
+
+function buildResult(){
+  const ax = computeAxes();
+  const key = pickType(ax);
+  const t = TYPES[key]; const rel = REL[key]; const d = DETAIL[key];
+  lastResult = {t, rel, d, ax};
+  renderResultView('detail'); // 初期は詳細表示
+}
+
+function renderResultView(mode){
+  if(!lastResult) return;
+  const {t, rel, d, ax} = lastResult;
+  const html = [];
+  html.push(`<div class="badge">${t.cluster}</div> <div class="badge">${t.perspective}</div> <div class="badge">クアドラ：${t.quadra}</div>`);
+  html.push(`<h2>あなたは「${t.name}」</h2>`);
+  if(mode==='simple'){
+    html.push(`<p class="muted">強み：${d.strength[0]||'—'} ／ 弱み：${d.weak[0]||'—'}</p>`);
+  } else {
+    html.push(`<h3>強み</h3><ul>${d.strength.map(x=>`<li>${x}</li>`).join('')}</ul>`);
+    html.push(`<h3>弱み</h3><ul>${d.weak.map(x=>`<li>${x}</li>`).join('')}</ul>`);
+    html.push(`<h3>相性</h3><ul>
+      <li><b>合う（デュアル）：</b>${rel?.dual||'—'}</li>
+      <li><b>良い（同クアドラ）：</b>${(rel?.same||[]).join('・')||'—'}</li>
+      <li><b>注意（コンフリクト）：</b>${rel?.conflict||'—'}</li>
+    </ul>`);
+    html.push(`<h3>VTuber適性</h3><ul>${d.vtuber.map(x=>`<li>${x}</li>`).join('')}</ul>`);
+    html.push(`<h3>コラボの立ち位置</h3><p>${d.role||'—'}</p>`);
+    html.push(`<h3>軸スコア</h3><p>E/I=${ax.EI.toFixed(1)}　N/S=${ax.NS.toFixed(1)}　T/F=${ax.TF.toFixed(1)}　J/P=${ax.JP.toFixed(1)}</p>`);
+  }
+  const card = document.getElementById('resultCard');
+  card.innerHTML = html.join('');
+  card.style.display='block';
+  card.dataset.share = `【雲井鳴診断】タイプ：${t.name}（${t.cluster}/${t.perspective}/クアドラ=${t.quadra})`;
+}
+
 /* ===================== UI制御 ===================== */
-let mode='20', answers={}, current=[];
-function setMode(m){
-  mode = m; current = (m==='20')? Q20 : Q60; answers={};
-  document.getElementById('modeLabel').textContent = (m==='20')? '20問版':'60問版';
-  renderQuestions(); updateProgress();
-  const rc = document.getElementById('resultCard'); rc.style.display='none'; rc.innerHTML='';
-  document.getElementById('warnMsg').textContent='';
-}
-
-function renderQuestions(){
-  const wrap = document.getElementById('questionCard'); wrap.innerHTML='';
-  current.forEach(q=>{
-    const sec = document.createElement('div'); sec.className='q';
-    sec.innerHTML = `
-      <div class="qtitle" id="t_${q.id}">${q.text}</div>
-      <div class="slider">
-        <span class="pill">-5</span>
-        <input type="range" min="-5" max="5" step="1" value="0" id="${q.id}" aria-labelledby="t_${q.id}">
-        <span class="pill">+5</span>
-        <span class="pill" id="v_${q.id}">0</span>
-      </div>`;
-    wrap.appendChild(sec);
-    const input = sec.querySelector('input');
-    input.addEventListener('input', e=>{
-      answers[q.id]=Number(e.target.value);
-      sec.querySelector(`#v_${q.id}`).textContent=String(answers[q.id]||0);
-      updateProgress();
-    });
-  });
-}
-
-function updateProgress(){
-  const total = current.length;
-  const done = Object.keys(answers).filter(k=>answers[k]!==undefined && answers[k]!==null).length;
-  const pct = Math.round((done/total)*100);
-  document.getElementById('bar').style.width = pct+'%';
-  document.getElementById('count').textContent = `${done}/${total} 回答（${pct}%）`;
-}
-
 function tryShowResult(){
   const unanswered = current.filter(q => answers[q.id]===undefined || answers[q.id]===null);
   if(unanswered.length>0){
@@ -372,57 +367,6 @@ function tryShowResult(){
   buildResult();
 }
 
-function buildResult(){
-  const ax = computeAxes();
-  const key = pickType(ax);
-  const t = TYPES[key]; const rel = REL[key]; const d = DETAIL[key]||{strength:[],weak:[],vtuber:[],role:''};
-
-  const simple = document.getElementById('showSimple').dataset.on==='1';
-
-  const html = [];
-  html.push(`<div class="badge">${t.cluster}</div> <div class="badge">${t.perspective}</div> <div class="badge">クアドラ：${t.quadra}</div>`);
-  html.push(`<h2>あなたは「${t.name}」</h2>`);
-  if(simple){
-    html.push(`<p class="muted">強み：${d.strength[0]||'—'} ／ 弱み：${d.weak[0]||'—'}</p>`);
-  }else{
-    html.push(`<h3>強み</h3><ul>${d.strength.map(x=>`<li>${x}</li>`).join('')}</ul>`);
-    html.push(`<h3>弱み</h3><ul>${d.weak.map(x=>`<li>${x}</li>`).join('')}</ul>`);
-    html.push(`<h3>相性</h3><ul>
-      <li><b>合う（デュアル）：</b>${rel?.dual||'—'}</li>
-      <li><b>良い（同クアドラ）：</b>${(rel?.same||[]).join('・')||'—'}</li>
-      <li><b>注意（コンフリクト）：</b>${rel?.conflict||'—'}</li>
-    </ul>`);
-    html.push(`<h3>VTuber適性</h3><ul>${d.vtuber.map(x=>`<li>${x}</li>`).join('')}</ul>`);
-    html.push(`<h3>コラボの立ち位置</h3><p>${d.role||'—'}</p>`);
-    html.push(`<h3>軸スコア</h3><p>E/I=${ax.EI.toFixed(1)}　N/S=${ax.NS.toFixed(1)}　T/F=${ax.TF.toFixed(1)}　J/P=${ax.JP.toFixed(1)}</p>`);
-  }
-
-  const shareText = [
-    '【雲井鳴診断 結果】',
-    `タイプ：${t.name}（${t.cluster}／${t.perspective}／クアドラ=${t.quadra}）`,
-    `軸スコア：E/I=${ax.EI.toFixed(1)} N/S=${ax.NS.toFixed(1)} T/F=${ax.TF.toFixed(1)} J/P=${ax.JP.toFixed(1)}`
-  ].join('\n');
-
-  const card = document.getElementById('resultCard');
-  card.innerHTML = html.join('');
-  card.style.display='block';
-  card.dataset.share = shareText;
-  document.getElementById('warnMsg').textContent='';
-}
-
-/* コピー機能（iOS互換フォールバック） */
-function copyToClipboard(txt){
-  if(navigator.clipboard){
-    navigator.clipboard.writeText(txt).then(()=>alert('結果をコピーしました。')).catch(()=>fallbackCopy(txt));
-  }else fallbackCopy(txt);
-}
-function fallbackCopy(txt){
-  const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta);
-  ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-  alert('結果をコピーしました。（互換モード）');
-}
-
-/* 初期化 */
 function init(){
   document.getElementById('mode20').addEventListener('click',()=>setMode('20'));
   document.getElementById('mode60').addEventListener('click',()=>setMode('60'));
@@ -433,30 +377,15 @@ function init(){
     copyToClipboard(txt);
   });
 
-  // シンプル/詳細切替（初期は詳細表示）
   const simpleBtn = document.getElementById('showSimple');
   const detailBtn = document.getElementById('showDetail');
-  simpleBtn.dataset.on='0'; 
-  detailBtn.dataset.on='1';
-  simpleBtn.classList.add('muted'); 
-  detailBtn.classList.remove('muted');
-
-  simpleBtn.addEventListener('click', ()=>{
-    simpleBtn.dataset.on='1'; 
-    detailBtn.dataset.on='0'; 
-    simpleBtn.classList.remove('muted'); 
-    detailBtn.classList.add('muted'); 
-  });
-  detailBtn.addEventListener('click', ()=>{
-    simpleBtn.dataset.on='0'; 
-    detailBtn.dataset.on='1'; 
-    simpleBtn.classList.add('muted'); 
-    detailBtn.classList.remove('muted'); 
-  });
+  simpleBtn.addEventListener('click', ()=>renderResultView('simple'));
+  detailBtn.addEventListener('click', ()=>renderResultView('detail'));
 
   setMode('20'); // デフォルトは20問
 }
 document.addEventListener('DOMContentLoaded', init);
+
 </script>
 </body>
 </html>
