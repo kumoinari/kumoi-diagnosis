@@ -73,8 +73,6 @@
       <div class="inner">
         <div class="muted">モード：<span id="modeLabel">20問版</span></div>
         <div class="row">
-          <button class="btn ghost" id="showSimple">シンプル表示</button>
-          <button class="btn" id="showDetail">詳細表示</button>
           <button class="btn ghost" id="copyBtn">結果をコピー</button>
           <button class="btn" id="calcBtn">結果を表示</button>
         </div>
@@ -286,11 +284,9 @@ const DETAIL = {
 /* ===================== 診断ロジック ===================== */
 function sumAxis(axis){ return current.filter(q=>q.axis===axis).reduce((a,q)=>a+(answers[q.id]??0)*q.polarity,0); }
 function computeAxes(){
-  return {
-    EI: sumAxis('EI'), NS: sumAxis('NS'), TF: sumAxis('TF'), JP: sumAxis('JP'),
-    Ni: sumAxis('Ni'), Ne: sumAxis('Ne'), Si: sumAxis('Si'), Se: sumAxis('Se'),
-    Ti: sumAxis('Ti'), Te: sumAxis('Te'), Fi: sumAxis('Fi'), Fe: sumAxis('Fe')
-  };
+  return { EI: sumAxis('EI'), NS: sumAxis('NS'), TF: sumAxis('TF'), JP: sumAxis('JP'),
+           Ni: sumAxis('Ni'), Ne: sumAxis('Ne'), Si: sumAxis('Si'), Se: sumAxis('Se'),
+           Ti: sumAxis('Ti'), Te: sumAxis('Te'), Fi: sumAxis('Fi'), Fe: sumAxis('Fe') };
 }
 function axesToMBTI(ax){
   const E = ax.EI>=0?'E':'I';
@@ -314,52 +310,36 @@ function pickType(ax){
   return key;
 }
 
-/* ===================== 結果描画（キャッシュ方式） ===================== */
+/* ===================== 結果描画 ===================== */
 let lastResult = null;
 
 function buildResult(){
   const ax = computeAxes();
   const key = pickType(ax);
-  const t = TYPES[key]; 
-  const rel = REL[key]; 
-  const d = DETAIL[key];
+  const t = TYPES[key]; const rel = REL[key]; const d = DETAIL[key];
   lastResult = {t, rel, d, ax};
 
-  // 結果は常に詳細表示で出す
+  // 常に詳細表示
   renderResultView('detail');
-
-  // 警告を消す
   document.getElementById('warnMsg').textContent = '';
-
-// ボタン状態を詳細側に揃える
-const simpleBtn = document.getElementById('showSimple');
-const detailBtn = document.getElementById('showDetail');
-simpleBtn.classList.add('muted');
-detailBtn.classList.remove('muted');
-
 }
 
-
-function renderResultView(mode){
+function renderResultView(){
   if(!lastResult) return;
   const {t, rel, d, ax} = lastResult;
   const html = [];
   html.push(`<div class="badge">${t.cluster}</div> <div class="badge">${t.perspective}</div> <div class="badge">クアドラ：${t.quadra}</div>`);
   html.push(`<h2>あなたは「${t.name}」</h2>`);
-  if(mode==='simple'){
-    html.push(`<p class="muted">強み：${d.strength[0]||'—'} ／ 弱み：${d.weak[0]||'—'}</p>`);
-  } else {
-    html.push(`<h3>強み</h3><ul>${d.strength.map(x=>`<li>${x}</li>`).join('')}</ul>`);
-    html.push(`<h3>弱み</h3><ul>${d.weak.map(x=>`<li>${x}</li>`).join('')}</ul>`);
-    html.push(`<h3>相性</h3><ul>
-      <li><b>合う（デュアル）：</b>${rel?.dual||'—'}</li>
-      <li><b>良い（同クアドラ）：</b>${(rel?.same||[]).join('・')||'—'}</li>
-      <li><b>注意（コンフリクト）：</b>${rel?.conflict||'—'}</li>
-    </ul>`);
-    html.push(`<h3>VTuber適性</h3><ul>${d.vtuber.map(x=>`<li>${x}</li>`).join('')}</ul>`);
-    html.push(`<h3>コラボの立ち位置</h3><p>${d.role||'—'}</p>`);
-    html.push(`<h3>軸スコア</h3><p>E/I=${ax.EI.toFixed(1)}　N/S=${ax.NS.toFixed(1)}　T/F=${ax.TF.toFixed(1)}　J/P=${ax.JP.toFixed(1)}</p>`);
-  }
+  html.push(`<h3>強み</h3><ul>${d.strength.map(x=>`<li>${x}</li>`).join('')}</ul>`);
+  html.push(`<h3>弱み</h3><ul>${d.weak.map(x=>`<li>${x}</li>`).join('')}</ul>`);
+  html.push(`<h3>相性</h3><ul>
+    <li><b>合う（デュアル）：</b>${rel?.dual||'—'}</li>
+    <li><b>良い（同クアドラ）：</b>${(rel?.same||[]).join('・')||'—'}</li>
+    <li><b>注意（コンフリクト）：</b>${rel?.conflict||'—'}</li>
+  </ul>`);
+  html.push(`<h3>VTuber適性</h3><ul>${d.vtuber.map(x=>`<li>${x}</li>`).join('')}</ul>`);
+  html.push(`<h3>コラボの立ち位置</h3><p>${d.role||'—'}</p>`);
+  html.push(`<h3>軸スコア</h3><p>E/I=${ax.EI.toFixed(1)}　N/S=${ax.NS.toFixed(1)}　T/F=${ax.TF.toFixed(1)}　J/P=${ax.JP.toFixed(1)}</p>`);
   const card = document.getElementById('resultCard');
   card.innerHTML = html.join('');
   card.style.display='block';
@@ -391,30 +371,9 @@ function init(){
     if(!txt){ alert('まず結果を表示してください。'); return; }
     copyToClipboard(txt);
   });
-
-  const simpleBtn = document.getElementById('showSimple');
-  const detailBtn = document.getElementById('showDetail');
-
-  // ここに追加してください 👇
-  simpleBtn.addEventListener('click', ()=>{
-    if(!lastResult) return;  // 結果が出る前は何もしない
-    renderResultView('simple');
-  });
-  detailBtn.addEventListener('click', ()=>{
-    if(!lastResult) return;
-    renderResultView('detail');
-  });
-
   setMode('20'); // デフォルトは20問
-
-  // 🔹 初期状態を「詳細表示」に固定
-  simpleBtn.classList.add('muted');
-  detailBtn.classList.remove('muted');
 }
 document.addEventListener('DOMContentLoaded', init);
-
-
-
 </script>
 </body>
 </html>
